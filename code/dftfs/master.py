@@ -1,5 +1,7 @@
+# app / __init__.py
+
 import argparse
-import flask
+from flask import Flask
 import hashlib
 import numpy
 import requests
@@ -7,22 +9,26 @@ import time
 
 from threading import Thread
 
-import random
-import sys
+app = Flask(__name__)
+
+
+@app.route('/')
+def index():
+    return "Hello world !"
+
 
 class Master(Thread):
-    def __init__(self, lettre):
+    def __init__(self, nb_nodes, ip, port):
         Thread.__init__(self)
-        self.lettre = str(lettre)
+        self.nb_nodes = nb_nodes
+        self.ip = ip
+        self.port = port
+        self.addr = "http://" + ip + ":" + str(port)
+
+        self.nodes_ls = [((None, 2000), "dead")] * nb_nodes
+        for node in range(nb_nodes):
+            self.nodes_ls[node] = ((None, 2000 + node), "dead")
+        self.files = []
 
     def run(self):
-        """Code à exécuter pendant l'exécution du thread."""
-        i = 0
-        while i < 20:
-            sys.stdout.write(self.lettre)
-            sys.stdout.flush()
-            attente = 0.2
-            attente += random.randint(1, 60) / 100
-            time.sleep(attente)
-            i += 1
-            print(i)
+        app.run(host=self.ip, port=self.port)
