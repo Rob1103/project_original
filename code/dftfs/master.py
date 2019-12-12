@@ -9,26 +9,46 @@ import time
 
 from threading import Thread
 
+# global variables should always be declared "global" before being used in functions (see index())
+nb_nodes = 0
+ip_ = 0
+port_ = 0
+nodes_ls = []
+files = []
+
 app = Flask(__name__)
 
 
 @app.route('/')
 def index():
+    global nb_nodes
+    print(nb_nodes)
     return "Hello world !"
 
 
-class Master(Thread):
-    def __init__(self, nb_nodes, ip, port):
-        Thread.__init__(self)
-        self.nb_nodes = nb_nodes
-        self.ip = ip
-        self.port = port
-        self.addr = "http://" + ip + ":" + str(port)
+@app.route('/heartbeat/<ip>/<port>')
+def heartbeat(ip, port):
+    return "Hello world !"  # implement heartbeat
 
-        self.nodes_ls = [((None, 2000), "dead")] * nb_nodes
+
+class Master(Thread):
+    def __init__(self, nbnodes, ip, port):
+        Thread.__init__(self)
+        global nb_nodes
+        nb_nodes = nbnodes
+        global ip_
+        ip_ = ip
+        global port_
+        port_ = port
+
+        global nodes_ls
+        nodes_ls = [((None, 2000), "dead")] * nb_nodes
         for node in range(nb_nodes):
-            self.nodes_ls[node] = ((None, 2000 + node), "dead")
-        self.files = []
+            nodes_ls[node] = ((None, 2000 + node), "dead")
+        global files
+        files = []
 
     def run(self):
-        app.run(host=self.ip, port=self.port)
+        global ip_
+        global port_
+        app.run(host=ip_, port=port_)
