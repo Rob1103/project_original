@@ -10,11 +10,10 @@ import time
 from threading import Thread
 
 # global variables should always be declared "global" before being used in functions (see index())
+port = 0
 nb_nodes = 0
-ip_ = 0
-port_ = 0
 nodes_ls = []
-files = []
+files_locations = []
 
 app = Flask(__name__)
 
@@ -28,27 +27,23 @@ def index():
 
 @app.route('/heartbeat/<ip>/<port>')
 def heartbeat(ip, port):
-    return "Hello world !"  # implement heartbeat
+    return "Hello world !"
 
 
-class Master(Thread):
-    def __init__(self, nbnodes, ip, port):
-        Thread.__init__(self)
-        global nb_nodes
-        nb_nodes = nbnodes
-        global ip_
-        ip_ = ip
-        global port_
-        port_ = port
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('nodes')
+    parser.add_argument('flask_port')
+    args = parser.parse_args()
+    nb_nodes = int(args.nodes)
+    port = int(args.flask_port)
+    nodes_ls = [((None, 2000), "dead")] * nb_nodes
+    for node in range(nb_nodes):
+        nodes_ls[node] = ((None, 2000 + node), "dead")
+    app.run(host="localhost", port=port)
+    new watchdog
+    waitforhearbeat()
 
-        global nodes_ls
-        nodes_ls = [((None, 2000), "dead")] * nb_nodes
-        for node in range(nb_nodes):
-            nodes_ls[node] = ((None, 2000 + node), "dead")
-        global files
-        files = []
+class Watchdog:
+    
 
-    def run(self):
-        global ip_
-        global port_
-        app.run(host=ip_, port=port_)

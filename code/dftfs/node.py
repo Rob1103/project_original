@@ -9,6 +9,12 @@ import time
 
 from threading import Thread
 
+# global variables should always be declared "global" before being used in functions (see index())
+port = 0
+master_ip = "localhost"
+master_port = 0
+files = []
+
 app = Flask(__name__)
 
 
@@ -17,17 +23,9 @@ def index():
     return "Hello world !"
 
 
-class Node(Thread):
-    def __init__(self, master_ip, master_port, ip, port):
-        Thread.__init__(self)
-        self.master_ip = master_ip
-        self.master_port = master_port
-        self.ip = ip
-        self.port = port
-        self.master_addr = "http://" + master_ip + ":" + str(master_port)
-        self.addr = "http://" + ip + ":" + str(port)
-
-        self.files = []
-
-    def run(self):
-        app.run(host=self.ip, port=self.port)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('flask_port')
+    args = parser.parse_args()
+    port = int(args.flask_port)
+    app.run(host="localhost", port=port)
