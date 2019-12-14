@@ -1,10 +1,11 @@
 # app / __init__.py
 
 import argparse
-from flask import Flask, json
+from flask import Flask, json, jsonify
 import hashlib
 import numpy
 import requests
+from requests.exceptions import Timeout
 import time
 
 from threading import Thread
@@ -19,10 +20,12 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Hello world !"
+    return "Ok"
 
 
-@app.route('/json?state=heartbeat', methods=['GET'])
+# ATTENTION : mettre des noms de route du style /mot1/mot2/mot3/... & pas de caractères spéciaux !!!
+# Sinon spécifier params=my_data ds la route &&& ds la request !!!
+@app.route('/heart', methods=['GET'])
 def heartbeat():
     return json.dumps({"state": "alive"})
 

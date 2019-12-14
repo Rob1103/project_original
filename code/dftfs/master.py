@@ -5,9 +5,11 @@ from flask import Flask
 import hashlib
 import numpy
 import requests
+from requests.exceptions import Timeout
 import time
 
 from threading import Thread
+import json
 
 # global variables should always be declared "global" before being used in functions (see index())
 port = 0
@@ -18,29 +20,34 @@ files_locations = []
 app = Flask(__name__)
 
 
-@app.route('/')
-def index():
-    global nb_nodes
-    print(nb_nodes)
-    return "Hello world !"
-
-
-@app.route('/heartbeat/<ip>/<port>')
-def heartbt(ip, port):
-    return "Hello world !"
-
-
 class Watchdog(Thread):
     def __init__(self):
         Thread.__init__(self)
 
     def run(self):
         global nodes_ls
-        data = {'state': "heartbeat"}
-        print("http://localhost:" + str(nodes_ls[0][0]))
-        response = requests.get(url="http://localhost:" + str(nodes_ls[0][0]), params=data)  # change node_ls elem
-        data = response.json()
-        print(data)
+        while True:
+            time.sleep(120)
+            for n in nodes_ls:
+                data = {}
+                try:
+                    response = requests.get("http://localhost:" + n[0] + "/heart", timeout=2)
+                except Timeout:
+                    n[1] = "dead"
+                    duplicate_data()  # duplicate
+                    continue
+                try:
+                    data = response.json()
+                except json.decoder.JSONDecodeError:
+                    n[1] = "dead"
+                    duplicate_data()  # duplicate
+                    continue
+                n[1] = "alive"
+
+
+# to be implemented
+def duplicate_data():
+    return "Ok"
 
 
 if __name__ == "__main__":
@@ -52,7 +59,7 @@ if __name__ == "__main__":
     port = int(args.flask_port)
     nodes_ls = [(2000, "dead")] * nb_nodes
     for node in range(nb_nodes):
-        nodes_ls[node] = (2000 + node, "dead")
+        nodes_ls[node] = (2000 + node, "alive")
     watch = Watchdog()
     watch.start()
     app.run(host="localhost", port=port)
