@@ -1,7 +1,7 @@
 # app / __init__.py
 
 import argparse
-from flask import Flask
+from flask import Flask, json
 import hashlib
 import numpy
 import requests
@@ -11,7 +11,6 @@ from threading import Thread
 
 # global variables should always be declared "global" before being used in functions (see index())
 port = 0
-master_ip = "localhost"
 master_port = 0
 files = []
 
@@ -21,6 +20,11 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return "Hello world !"
+
+
+@app.route('/json?state=heartbeat', methods=['GET'])
+def heartbeat():
+    return json.dumps({"state": "alive"})
 
 
 if __name__ == "__main__":
