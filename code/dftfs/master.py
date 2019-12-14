@@ -27,22 +27,28 @@ class Watchdog(Thread):
     def run(self):
         global nodes_ls
         while True:
-            time.sleep(120)
+            time.sleep(3)
             for n in nodes_ls:
                 data = {}
                 try:
-                    response = requests.get("http://localhost:" + n[0] + "/heart", timeout=2)
+                    response = requests.get("http://localhost:" + str(n[0]) + "/heart", timeout=2)
                 except Timeout:
-                    n[1] = "dead"
+                    lst = list(n)
+                    lst[1] = "dead"
+                    n = tuple(lst)
                     duplicate_data()  # duplicate
                     continue
                 try:
                     data = response.json()
                 except json.decoder.JSONDecodeError:
-                    n[1] = "dead"
+                    lst = list(n)
+                    lst[1] = "dead"
+                    n = tuple(lst)
                     duplicate_data()  # duplicate
                     continue
-                n[1] = "alive"
+                lst = list(n)
+                lst[1] = "alive"
+                n = tuple(lst)
 
 
 # to be implemented
