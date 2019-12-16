@@ -31,7 +31,7 @@ class Master:
         
         self.node_spaces = zip(node_ls, sizes) # [(node1addr, size1), (node2addr,size2), ...]
         
-    def request_handler(requestData):
+    def request_handler(self,requestData):
     # requestData = fictive object containing all info needed to process request
     # responseData = fictive object containing all info needed to craft answer
         
@@ -47,19 +47,21 @@ class Master:
             
         if(requestData.type == "copy")
             #copy handler
-            responseData.addrs = self.__duplication_handler(requestData)
+            #src_path, dst_path -> 1st exist == True; 2nd exist == False
+            #idem as "put" but fetch bytes from src_path
+            #TODO
         return ResponseData
         
-    def __addr_table_access(path):
+    def __addr_table_access(self, path):
     
         return path_to_addr.get(path)
         
-    def __exists(path):
+    def __exists(self, path):
         if(__addr_table_access(path) == None):
             return False
         return True
         
-    def __get_addr(path):
+    def __get_addr(self, path):
     
         addr = __addr_table_access(path)
         
@@ -67,7 +69,7 @@ class Master:
             return error_addr
         return addr
         
-    def __find_space(bytesLen, invalid): 
+    def __find_space(self, bytesLen, invalid): 
     # bytesLen = bytes length
     # invalid = list of node to be excluded from search)
         
@@ -78,7 +80,7 @@ class Master:
         #for now don't care about lent space
         return addr
       
-    def __duplication_handler(requestData):
+    def __duplication_handler(self, requestData):
     
         #find  2 suitable nodes (all nodes != )
         nodes = []
@@ -86,10 +88,9 @@ class Master:
         for n in range(3):
             nAddr = __find_space(requestData.bytesLen, nodes)
             nodes.append(nAddr)
-        
         return nodes
     
-    def notification_handler(notificationData):
+    def notification_handler(self, notificationData):
         
         if(notificationData.type == "put")
             #put handler
@@ -100,7 +101,7 @@ class Master:
             #failure handler
             nAddr = self.__failure_handler(notificationData.addr)
     
-    def __failure_handler(addr):
+    def __failure_handler(self, addr):
         
         # identify all paths which have failed node correspondance
         # discard nodeAddr of failed node in path_to_addr dictoinnary 
