@@ -30,12 +30,12 @@ app = Flask(__name__)
 def notification_handler(method):
     # notificationData is a json dict with 'key:value' pairs
     notificationData = request.json
-    if (method == "put")
+    if method == "put":
         # put handler
         path_to_addr[notificationData.path] = notificationData.addr
         # put corresponding lent bytes as occupied
 
-    if (method == "failure")
+    if method == "failure":
         # failure handler
         nAddr = __failure_handler(notificationData.addr)
 
@@ -46,19 +46,19 @@ def request_handler(method):
     # responseData = fictive object containing all info needed to craft answer
     requestData = request.json()
 
-    if (method == "get")
+    if method == "get":
         # get handler
         responseData.answer = __get_addr(requestData.path)
 
-    elif (method == "exists")
+    elif method == "exists":
         # exist handler
         responseData.answer = __exists(requestData.path)
 
-    elif (method == "put")
+    elif method == "put":
         # put handler
         responseData.addrs = __duplication_handler(requestData)
 
-    else  # method = "copy"
+    else:  # method = "copy"
     # copy handler
     # src_path, dst_path -> 1st exist == True; 2nd exist == False
     # idem as "put" but fetch bytes from src_path
