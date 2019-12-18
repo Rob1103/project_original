@@ -1,7 +1,7 @@
 # app / __init__.py
 
 import argparse
-from flask import Flask
+from flask import Flask, request
 import hashlib
 import numpy
 import requests
@@ -17,8 +17,103 @@ nb_nodes = 0
 nodes_ls = [tuple]
 files_locations = []
 
+path_to_addr = {}  # addr need to be [addr1, addr2, addr3], currently just addr
+node_size = 1
+sizes = [node_size] * nb_nodes  # [node_size, node_size, ...]
+node_spaces = zip(nodes_ls, sizes)  # [(node1addr, size1), (node2addr,size2), ...]
+
 app = Flask(__name__)
 
+
+# faut-il rajouter "/<path:name>" après "/notification" pr avoir le path cô ds put_handler ?
+@app.route('/notification', methods=['GET'])
+def notification_handler():
+    # notificationData is a json dict with 'key:value' pairs
+    notificationData = request.json
+    if (notificationData.type == "put")
+        # put handler
+        path_to_addr[notificationData.path] = notificationData.addr
+        # put corresponding lent bytes as occupied
+
+    if (notificationData.type == "failure")
+        # failure handler
+        nAddr = __failure_handler(notificationData.addr)
+
+
+@app.route('/<path:name>', methods=['PUT'])
+def put_handler(name):
+    # responseData is a json dict with 'key:value' pairs
+    requestData = request.json
+    return __duplication_handler(requestData)  # faut le path ici ? Si oui faut rajouter "name" cô arg à _dup_handler
+
+
+@app.route('/exists/<path:name>', methods=['GET'])
+def exists_handler(name):
+    return __exists(name)
+
+
+@app.route('/<path:name>', methods=['GET'])
+def get_handler(name):
+    return __get_addr(name)
+
+
+@app.route('/copy', methods=['POST'])
+def copy_handler():
+    # responseData is a json dict with 'key:value' pairs (assumed {"path1": "my_path", "path2": "my_path2"})
+    requestData = request.json
+    # copy handler
+    # src_path, dst_path -> 1st exist == True; 2nd exist == False
+    # idem as "put" but fetch bytes from src_path
+    # TODO
+    return responseData(requestData)
+
+########################################################################################################################
+def __addr_table_access(path):
+    return path_to_addr.get(path)
+
+def __exists(path):
+    if (__addr_table_access(path) == None):
+        return False
+    return True
+
+def __get_addr(path):
+    addr = __addr_table_access(path)
+
+    if (addr == None):
+        return error_addr
+    return addr
+
+def __find_space(bytesLen, invalid):
+    # bytesLen = bytes length
+    # invalid = list of node to be excluded from search)
+
+    # algorithm based on node_spaces list
+    # (exclude invalid nodes from this list)
+    # return addr with enough space to fit bytesLen
+    # if none fit -> return error_addr
+    # for now don't care about lent space
+    return addr
+
+def __duplication_handler(requestData):
+    # find  2 suitable nodes (all nodes != )
+    nodes = []
+    n = 0
+    for n in range(3):
+        nAddr = __find_space(requestData.bytesLen, nodes)
+        nodes.append(nAddr)
+    return nodes
+
+def __failure_handler(addr):
+    return 0
+
+# identify all paths which have failed node correspondance
+# discard nodeAddr of failed node in path_to_addr dictoinnary
+
+# contact node which has file & ask them for file size for path
+# -> or keep info somewhere in a table in master
+# nAddr = self__find_space(bytesLen, [])
+# ask node to copy file to nAddr (master writes a request)
+########################################################################################################################
 
 class Watchdog(Thread):
     def __init__(self):
@@ -29,9 +124,8 @@ class Watchdog(Thread):
         while True:
             time.sleep(3)
             for n in nodes_ls:
-                data = {}
                 try:
-                    response = requests.get("http://localhost:" + str(n[0]) + "/heart", timeout=2)
+                    response = requests.get("http://localhost:" + str(n[0]) + "/heart", timeout=5)
                 except Timeout:
                     lst = list(n)
                     lst[1] = "dead"
@@ -40,6 +134,9 @@ class Watchdog(Thread):
                     continue
                 try:
                     data = response.json()
+                    print(data)
+                    print(data.keys().find('state'))
+                    print(data.values())
                 except json.decoder.JSONDecodeError:
                     lst = list(n)
                     lst[1] = "dead"
