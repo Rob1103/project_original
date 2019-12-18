@@ -26,46 +26,45 @@ app = Flask(__name__)
 
 
 # faut-il rajouter "/<path:name>" après "/notification" pr avoir le path cô ds put_handler ?
-@app.route('/notification', methods=['GET'])
-def notification_handler():
+@app.route('/notification/<string:method>')
+def notification_handler(method):
     # notificationData is a json dict with 'key:value' pairs
     notificationData = request.json
-    if (notificationData.type == "put")
+    if (method == "put")
         # put handler
         path_to_addr[notificationData.path] = notificationData.addr
         # put corresponding lent bytes as occupied
 
-    if (notificationData.type == "failure")
+    if (method == "failure")
         # failure handler
         nAddr = __failure_handler(notificationData.addr)
 
 
-@app.route('/<path:name>', methods=['PUT'])
-def put_handler(name):
-    # responseData is a json dict with 'key:value' pairs
-    requestData = request.json
-    return __duplication_handler(requestData)  # faut le path ici ? Si oui faut rajouter "name" cô arg à _dup_handler
+@app.route('/request/<string:method>')
+def request_handler(method):
+    # requestData = fictive object containing all info needed to process request
+    # responseData = fictive object containing all info needed to craft answer
+    requestData = request.json()
 
+    if (method == "get")
+        # get handler
+        responseData.answer = __get_addr(requestData.path)
 
-@app.route('/exists/<path:name>', methods=['GET'])
-def exists_handler(name):
-    return __exists(name)
+    elif (method == "exists")
+        # exist handler
+        responseData.answer = __exists(requestData.path)
 
+    elif (method == "put")
+        # put handler
+        responseData.addrs = __duplication_handler(requestData)
 
-@app.route('/<path:name>', methods=['GET'])
-def get_handler(name):
-    return __get_addr(name)
-
-
-@app.route('/copy', methods=['POST'])
-def copy_handler():
-    # responseData is a json dict with 'key:value' pairs (assumed {"path1": "my_path", "path2": "my_path2"})
-    requestData = request.json
+    else  # method = "copy"
     # copy handler
     # src_path, dst_path -> 1st exist == True; 2nd exist == False
     # idem as "put" but fetch bytes from src_path
     # TODO
-    return responseData(requestData)
+
+    return responseData
 
 ########################################################################################################################
 def __addr_table_access(path):
