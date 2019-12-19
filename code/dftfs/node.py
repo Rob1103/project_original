@@ -120,7 +120,7 @@ def node_handler(type):
     else:
         responseData["error"] = "unknownRequest"
 
-    return responseData
+    return json.dumps(responseData)
 
 ####################################################################################################
 
