@@ -1,19 +1,18 @@
 # app / __init__.py
 
 import argparse
-from flask import Flask, request
+from flask import Flask, request, json
 import hashlib
 import numpy
 import requests
 from requests.exceptions import Timeout
 import time
 import random
-
 from threading import Thread
 import json
 
 # global variables should always be declared "global" before being used in functions (see index())
-port = 0
+master_addr = 0
 nb_nodes = 0
 nodes_ls = []
 
@@ -21,81 +20,94 @@ path_to_addr = {}  # addr need to be [addr1, addr2, addr3], currently just addr
 node_size = 1024
 sizes = [node_size] * nb_nodes  # [node_size, node_size, ...]
 node_spaces = zip(nodes_ls, sizes)  # [(node1addr, size1), (node2addr,size2), ...]
+fault_tol = 3
 
 app = Flask(__name__)
 
 
 # faut-il rajouter "/<path:name>" après "/notification" pr avoir le path cô ds put_handler ?
-@app.route('/notification/<string:method>')
+@app.route('/notification/<string:method>', methods=['POST'])
 def notification_handler(method):
-    # notificationData is a json dict with 'key:value' pairs
-    notificationData = request.json
+    # notification_data is a json dict with 'key:value' pairs
+    notification_data = request.json()
     if method == "put":
         # put handler
-        global path_to_addr[notificationData["path"] = notificationData["addr"]
+        global path_to_addr
+        path_to_addr[notification_data["path"]] = notification_data["addr"]
         return 0
     """
     if method == "failure":
         # failure handler
-        wAddr = failure_handler(notificationData["addr"])
+        waddr = failure_handler(notification_data["addr"])
     """
 
-@app.route('/request/<string:method>')
+
+@app.route('/request/<string:method>', methods=['POST'])
 def request_handler(method):
-    # requestData = dictionary containing all info needed to process request
-    # responseData = dictionary containing all info needed to craft answer
-    requestData = request.json()
-    responseData = {}
+    # request_data = dictionary containing all info needed to process request
+    # response_data = dictionary containing all info needed to craft answer
+    # request_data = request.json()
+    request_data = request.form
+    print("in master")
+    print(request_data)
+    response_data = {}
 
     if method == "get":
         # get handler
-        responseData["gAddr"] = addr_table_access(requestData["path"]) #gAddr = get address
+        response_data["gaddr"] = addr_table_access(request_data["path"])  # gaddr = get address
 
     elif method == "exists":
-        # exist handler
-        responseData["exist"] = exists(requestData["path"])
+        # exists handler
+        response_data["exists"] = exists(request_data["path"])
 
     elif method == "put":
         # put handler
-        responseData["wAddr"] = duplication_handler(requestData["bytesLen"]) #wAddr = write address
+        response_data["waddr"] = duplication_handler(request_data["bytes_len"])  # waddr = write address
 
     else:
-        responseData["error"] = "unknownRequest"
+        response_data["error"] = "unknownRequest"
 
-    return json.dumps(responseData)
+    return json.dumps(response_data)
+
 
 ########################################################################################################################
 def addr_table_access(path):
-    return global path_to_addr[path]
+    global path_to_addr
+    return path_to_addr.get(path)
+
 
 def exists(path):
-    if (addr_table_access(path) == None):
+    if addr_table_access(path) is None:
         return False
     return True
 
-def find_space(bytesLen, invalid):
-    # bytesLen = bytes length
+
+def find_space(bytes_len, invalid):
+    # bytes_len = bytes length
     # invalid = list of node to be excluded from search)
     valid = []
+    global node_spaces
 
-    for tuple in global node_spaces:
-        if tuple[0] not in invalid:
-            if tuple[1] > bytesLen:
-                valid.append(tuple[0])
-                
+    for tuple_ in node_spaces:
+        if tuple_[0] not in invalid:
+            if tuple_[1] > bytes_len:
+                valid.append(tuple_[0])
+
     if not valid:
         return None
-    return random.choice(valid) # need to make (chosenAddr, size) -> (chosenAddr, size - bytesLen)
+    return random.choice(valid)  # need to make (chosenAddr, size) -> (chosenAddr, size - bytes_len)
 
-def duplication_handler(bytesLen):
-    wAddr = []
+
+def duplication_handler(bytes_len):
+    waddr = []
     invalid = []
-    
-    for i = 1 to 3
-        wAddr.append(find_space(bytesLen, invalid))
-        invalid.append(wAddr) #duplicates addresses but not a problem
-        
-    return wAddr
+
+    for i in range(fault_tol):
+        waddr.append(find_space(bytes_len, invalid))
+        invalid.append(waddr)  # duplicates addresses but not a problem
+
+    return waddr
+
 
 def failure_handler(addr):
     # identify all paths which have failed node correspondance
@@ -103,9 +115,10 @@ def failure_handler(addr):
 
     # contact node which has file & ask them for file size for path
     # -> or keep info somewhere in a table in master
-    # nAddr = self__find_space(bytesLen, [])
+    # nAddr = self__find_space(bytes_len, [])
     # ask node to copy file to nAddr (master writes a request)
-    return 0
+    return addr
+
 
 ########################################################################################################################
 
@@ -116,7 +129,6 @@ class Watchdog(Thread):
     def run(self):
         global nodes_ls
         while True:
-            time.sleep(3)
             for n in nodes_ls:
                 try:
                     response = requests.get("http://localhost:" + str(n) + "/heart", timeout=5)
@@ -124,25 +136,24 @@ class Watchdog(Thread):
                     """
                     lst = list(n)
                     lst[1] = "dead"
-                    n = tuple(lst)
+                    n = tuple_(lst)
                     duplicate_data()  # duplicate
                     """
-                    #call failure_handler(n)
+                    # call failure_handler(n)
                     continue
                 try:
                     data = response.json()
-                    print(data)
-                    print(data.keys().find('state'))
-                    print(data.values())
                 except json.decoder.JSONDecodeError:
                     """
                     lst = list(n)
                     lst[1] = "dead"
-                    n = tuple(lst)
+                    n = tuple_(lst)
                     duplicate_data()  # duplicate
                     """
-                    #call failure_handler(n)
+                    # call failure_handler(n)
                     continue
+            time.sleep(300)
+
 
 """
 # to be implemented
@@ -155,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument('nodes')
     parser.add_argument('flask_port')
     args = parser.parse_args()
-    #setting of arguments
+    # setting of arguments
     """
     nb_nodes = int(args.nodes)
     port = int(args.flask_port)
@@ -164,10 +175,11 @@ if __name__ == "__main__":
         nodes_ls[node] = (2000 + node, "alive")
     """
     nb_nodes = int(args.nodes)
+    master_addr = int(args.flask_port)
     nodes_ls = [2000] * nb_nodes
     for node in range(nb_nodes):
         nodes_ls[node] = (2000 + node)
-    #end of setting argument
+    # end of setting argument
     watch = Watchdog()
     watch.start()
-    app.run(host="localhost", port=port)
+    app.run(host="localhost", port=master_addr)

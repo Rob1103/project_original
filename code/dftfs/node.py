@@ -1,126 +1,133 @@
 # app / __init__.py
 
 import argparse
-from flask import Flask, json, jsonify
+from flask import Flask, request, json
 import hashlib
 import numpy
 import requests
-from requests.exceptions import Timeout
 import time
-
 from threading import Thread
+import json
 
 # global variables should always be declared "global" before being used in functions (see index())
-port = 0
 master_addr = 1024
 
-node_addr
-path_to_bytes
+node_addr = 0
+path_to_bytes = {}
 
 app = Flask(__name__)
 
+
 ###################################################################################################
 
-def requestMaster(requestData, type):
-    return json.dumps(requests.post(url = "http://localhost:" + master_addr + "/request/" + type, data = requestData))
+def request_master(request_data, type_):
+    return requests.post(url="http://localhost:" + str(master_addr) + "/request/" + type_, data=request_data).json()
 
-def requestNode(gAddr, requestData, type):
-    return json.dumps(request.post(url = "http://localhost:" + gAddr + "/node/" + type, data = requestData))
 
-def notifyMaster(notificationData):
-    return json.dumps(request.post(url = "http://localhost:" + master_addr + "/notification/" + "put", data = notificationData))
+def request_node(gaddr, request_data, type_):
+    return json.dumps(requests.post(url="http://localhost:" + gaddr + "/node/" + type_, data=request_data))
+
+
+def notify_master(notification_data):
+    return json.dumps(
+        requests.post(url="http://localhost:" + str(master_addr) + "/notification/" + "put", data=notification_data))
+
 
 # Client Handlers
-@app.route('/exists/<path:fileLocation>', methods=['GET'])
-def exist_handler(fileLocation):
-    requestData = {}
-    requestData["path"] = fileLocation
-    masterAnswer = requestMaster(requestData, "exist")
-    return json.dumps(masterAnswer)
+@app.route('/exists/<path:file_location>', methods=['GET'])
+def exists_handler(file_location):
+    request_data = {"path": file_location}
+    master_answer = request_master(request_data, "exists")
+    return str(master_answer["exists"])
 
-@app.route('/<path:fileLocation>', methods=['GET'])
-def get_handler(fileLocation)
-    requestData = {}
-    requestData["path"] = fileLocation
-    masterAnswer = requestMaster(requestData, "get")
-    if masterAnswer["gAddr"] == node_addr:
-        responseData["bytes"] = global path_to_bytes[fileLocation]
+
+@app.route('/<path:file_location>', methods=['GET'])
+def get_handler(file_location):
+    request_data = {"path": file_location}
+    master_answer = request_master(request_data, "get")
+    response_data = {}
+    global path_to_bytes
+    if master_answer["gaddr"] == node_addr:
+        response_data["bytes"] = path_to_bytes[file_location]
     else:
-        responseData = requestNode(masterAnswer["gAddr"], requestData, "get")
-    return json.dumps(responseData)
+        response_data = request_node(master_answer["gaddr"], request_data, "get")
+    return json.dumps(response_data)
 
-@app.route('/<path:fileLocation>', methods=['PUT'])
-def put_handler(fileLocation):
-    requestData = request.json()
-    requestData["path"] = fileLocation
-    data = {}
-    data["bytesLen"] = len(requestData["bytes"])
-    masterAnswer = requestMaster(data, "put")
-    wList = masterAnswer["wAddr"]
-    responseData = {}
-    if node_addr in wList:
-        wList.remove(node_addr)
-        global path_to_bytes[fileLocation] = requestData["bytes"] #check if path already in path_to_bytes -> if so, responseData["success"] = False
-        notificationData = {}
-        notificationData["path"] = fileLocation
-        notificationData["addr"] = node_addr
-        notifyMaster(notificationData)
-        responseData["success"] = True
-    for wAddr in wList:
-        responseData["success"] = requestNode(wAddr, requestData, "put")
+
+@app.route('/<path:file_location>', methods=['PUT'])
+def put_handler(file_location):
+    request_data = request.json()
+    request_data["path"] = file_location
+    data = {"bytesLen": len(request_data["bytes"])}
+    master_answer = request_master(data, "put")
+    wlist = master_answer["wAddr"]
+    response_data = {}
+    if node_addr in wlist:
+        wlist.remove(node_addr)
+        global path_to_bytes
+        path_to_bytes[file_location] = request_data[
+            "bytes"]  # check if path already in path_to_bytes -> if so, response_data["success"] = False
+        notification_data = {"path": file_location, "addr": node_addr}
+        notify_master(notification_data)
+        response_data["success"] = True
+    for wAddr in wlist:
+        request_data["path"] = file_location
+        response_data["success"] = request_node(wAddr, request_data, "put")
         # if success == False -> throw exception
-    return json.dumps(responseData)
-    
+    return json.dumps(response_data)
+
+
 @app.route('/copy', methods=['POST'])
 def copy_handler():
-    requestData = request.json()
-    responseData = {}
-    data1 = {}
-    data1["path"] = requestData["source_path"]
-    masterAnswer1 = requestMaster(data1, "get")
-    if masterAnswer1["gAddr"] == node_addr:
-        bytes = global path_to_bytes[requestData["source_path"]]
+    request_data = request.json()
+    data1 = {"path": request_data["source_path"]}
+    master_answer1 = request_master(data1, "get")
+    global path_to_bytes
+    if master_answer1["gaddr"] == node_addr:
+        bytes_ = path_to_bytes[request_data["source_path"]]
     else:
-        resp1 = requestNode(masterAnswer["gAddr"], requestData, "get")
-        bytes = resp1["bytes"]
-    data2 = {}
-    data2["bytesLen"] = len(bytes)
-    masterAnswer = requestMaster(data2, "put")
-    wList = masterAnswer["wAddr"]
-    responseData = {}
-    if node_addr in wList:
-        wList.remove(node_addr)
-        global path_to_bytes[fileLocation] = requestData["bytes"] #check if path already in path_to_bytes -> if so, responseData["success"] = False
-        notificationData = {}
-        notificationData["path"] = fileLocation
-        notificationData["addr"] = node_addr
-        notifyMaster(notificationData)
-        responseData["success"] = True
-    for wAddr in wList:
-        responseData["success"] = requestNode(wAddr, requestData, "put")
+        resp1 = request_node(master_answer1["gaddr"], request_data, "get")
+        bytes_ = resp1["bytes"]
+    data2 = {"bytesLen": len(bytes_)}
+    master_answer = request_master(data2, "put")
+    wlist = master_answer["wAddr"]
+    response_data = {}
+    if node_addr in wlist:
+        wlist.remove(node_addr)
+        path_to_bytes[request_data["destination_path"]] = request_data[
+            "bytes"]  # check if path already in path_to_bytes -> if so, response_data["success"] = False
+        notification_data = {"path": request_data["destination_path"], "addr": node_addr}
+        notify_master(notification_data)
+        response_data["success"] = True
+    for wAddr in wlist:
+        request_data["path"] = request_data["destination_path"]
+        response_data["success"] = request_node(wAddr, request_data, "put")
         # if success == False -> throw exception
-    return json.dumps(responseData)
-    
+    return json.dumps(response_data)
+
+
 # Node Communication  Handlers
 
-@app.route('/node/<string:type>', methods=['POST'])
-def node_handler(type):
-    requestData = request.json()
-    responseData = {}
-    
-    if (type == "get"):
-        responseData["bytes"] = global path_to_bytes[requestData["path"]]
-    elif (type == "put"):
-        global path_to_bytes[fileLocation] = requestData["bytes"] #check if path already in path_to_bytes -> if so, responseData["success"] = False
-        notificationData = {}
-        notificationData["path"] = fileLocation
-        notificationData["addr"] = node_addr
-        notifyMaster(notificationData)
-        responseData["success"] = True
-    else:
-        responseData["error"] = "unknownRequest"
+@app.route('/node/<string:type_>', methods=['POST'])
+def node_handler(type_):
+    request_data = request.json()
+    file_location = request_data["path"]
+    response_data = {}
+    global path_to_bytes
 
-    return json.dumps(responseData)
+    if type_ == "get":
+        response_data["bytes"] = path_to_bytes[request_data["path"]]
+    elif type_ == "put":
+        path_to_bytes[file_location] = request_data[
+            "bytes"]  # check if path already in path_to_bytes -> if so, response_data["success"] = False
+        notification_data = {"path": file_location, "addr": node_addr}
+        notify_master(notification_data)
+        response_data["success"] = True
+    else:
+        response_data["error"] = "unknownRequest"
+
+    return json.dumps(response_data)
+
 
 ####################################################################################################
 
